@@ -3,7 +3,6 @@ package cz.lukzon.studentRestApi.entity;
 import lombok.*;
 
 import javax.persistence.*;
-import java.time.LocalDate;
 
 @Table
 @Entity
@@ -12,32 +11,26 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class Student {
+public class Teacher {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(unique = true, nullable = false)
     private Long id;
 
-    @ManyToOne
+    @OneToOne(cascade = CascadeType.ALL)
     private Classroom classroom;
+
+    private String degree;
 
     private String firstname;
 
     private String surname;
 
-    private String email;
-
-    private LocalDate boarding;
-
-    private Integer age;
-
-    public Student(Classroom classroom, String firstname, String surname, String email, LocalDate boarding, Integer age) {
+    public Teacher(Classroom classroom, String degree, String firstname, String surname) {
         this.classroom = classroom;
+        this.degree = degree;
         this.firstname = firstname;
         this.surname = surname;
-        this.email = email;
-        this.boarding = boarding;
-        this.age = age;
     }
 }

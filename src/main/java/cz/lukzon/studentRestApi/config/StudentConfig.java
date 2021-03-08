@@ -13,7 +13,7 @@ import java.time.Month;
 
 @Configuration
 public class StudentConfig {
-
+/*
     @Bean
     CommandLineRunner commandLineRunner(StudentRepository repository) {
         return args -> {
@@ -31,11 +31,19 @@ public class StudentConfig {
                     LocalDate.of(2005, Month.MARCH, 18),
                     25
             );
+            Student pavel = new Student(
+                    "Pavel",
+                    "Konecny",
+                    "pavel.konecny@gmail.com",
+                    LocalDate.of(2000, Month.AUGUST, 12),
+                    12
+            );
             ArrayList<Student> arrayOfStudents = new ArrayList<>();
             arrayOfStudents.add(lukas);
             arrayOfStudents.add(martin);
+            arrayOfStudents.add(pavel);
             repository.saveAll(arrayOfStudents);
         };
     }
-
+ */
 }

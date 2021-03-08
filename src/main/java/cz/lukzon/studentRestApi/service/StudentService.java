@@ -1,101 +1,102 @@
 package cz.lukzon.studentRestApi.service;
 
+import cz.lukzon.studentRestApi.entity.Classroom;
 import cz.lukzon.studentRestApi.entity.Student;
-import cz.lukzon.studentRestApi.exception.ConflictException;
 import cz.lukzon.studentRestApi.exception.DataNotFoundException;
 import cz.lukzon.studentRestApi.exception.ProccesingRejectedException;
+import cz.lukzon.studentRestApi.idto.StudentIDTO;
+import cz.lukzon.studentRestApi.repository.ClassroomRepository;
 import cz.lukzon.studentRestApi.repository.StudentRepository;
 import cz.lukzon.studentRestApi.util.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.List;
 
 @Service
 public class StudentService {
 
     private final StudentRepository studentRepository;
+    private final ClassroomRepository classroomRepository;
 
     @Autowired
-    public StudentService(StudentRepository studentRepository) {
+    public StudentService(StudentRepository studentRepository, ClassroomRepository classroomRepository) {
         this.studentRepository = studentRepository;
+        this.classroomRepository = classroomRepository;
     }
 
-    public Optional<Student> getStudentById(Long id) {
-        return studentRepository.findById(id);
+    public Student getStudentById(Long studentId) throws DataNotFoundException {
+        return studentRepository.findById(studentId)
+                .orElseThrow(() -> new DataNotFoundException("This student is not exists"));
     }
 
-    public ArrayList<Student> getStudents() {
-        return new ArrayList<>(studentRepository.findAll());
+    public List<Student> getStudentsByClassroom(Long classroomId) throws DataNotFoundException {
+        Classroom classroom = classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new DataNotFoundException("This classroom is not exists"));
+        List<Student> students = studentRepository.findStudentsByClassroom(classroom);
+        if (students.isEmpty()) {
+            throw new DataNotFoundException("No students were found at this classroom");
+        }
+        return students;
     }
 
-    public void addNewStudent(Student student) throws ConflictException, ProccesingRejectedException {
-        String firstname = student.getFirstname();
-        String lastname = student.getLastname();
-        String email = student.getEmail();
+    public void addNewStudent(Long classroomId, StudentIDTO studentIDTO)
+            throws DataNotFoundException, ProccesingRejectedException {
+        Classroom classroom = classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new DataNotFoundException("This classroom is not exists"));
+        String firstname = studentIDTO.getFirstname();
+        String surname = studentIDTO.getSurname();
+        String email = studentIDTO.getEmail();
+        Integer age = studentIDTO.getAge();
 
-        if (!Utils.isNameValid(firstname)) {
-            throw new ProccesingRejectedException("Firstname is not valid, must contains more then 3 characters");
+        if (Utils.isNotStringValid(firstname)) {
+            throw new ProccesingRejectedException("Firstname is not valid, must contains more then 3 character");
+        }
+        if (Utils.isNotStringValid(surname)) {
+            throw new ProccesingRejectedException("Firstname is not valid, must contains more then 3 character");
+        }
+        if (Utils.isNotEmailValid(email)) {
+            throw new ProccesingRejectedException("Firstname is not valid, must contains more then 3 character");
+        }
+        if (age > 10) {
+            throw new ProccesingRejectedException("Student must be older then 10 years old");
         }
 
-        if (!Utils.isNameValid(lastname)) {
-            throw new ProccesingRejectedException("Surname is not valid, must contains more then 3 characters");
-        }
-
-        if (!Utils.isEmailValid(email)) {
-            throw new ProccesingRejectedException("Email is not in valid format");
-        }
-
-        Optional<Student> studentOptional = studentRepository.findStudentByEmail(student.getEmail());
-        if (studentOptional.isPresent()) {
-            throw new ConflictException("This student with this email is exists");
-        }
-        studentRepository.save(student);
+        studentRepository.save(new Student(classroom, firstname, surname, email, studentIDTO.getBoarding(), age));
     }
 
-    @Transactional
-    public void updateStudent(Long studentId, Student bodyStudent)
-            throws ProccesingRejectedException, DataNotFoundException, ConflictException {
-        String firstname = bodyStudent.getFirstname();
-        String lastname = bodyStudent.getLastname();
-        String email = bodyStudent.getEmail();
+    public void updateStudent(Long studentId, StudentIDTO studentIDTO) throws DataNotFoundException, ProccesingRejectedException {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new DataNotFoundException("Student with id " + studentId + " does not exists"));
+                .orElseThrow(() -> new DataNotFoundException("This student is not exists"));
+        String firstname = studentIDTO.getFirstname();
+        String surname = studentIDTO.getSurname();
+        String email = studentIDTO.getEmail();
+        Integer age = studentIDTO.getAge();
 
-        if (!Utils.isNameValid(firstname)) {
-            throw new ProccesingRejectedException("Firstname is not valid, must contains more then 3 characters");
+        if (Utils.isNotStringValid(firstname)) {
+            throw new ProccesingRejectedException("Firstname is not valid, must contains more then 3 character");
         }
-
-        if (!Utils.isNameValid(lastname)) {
-            throw new ProccesingRejectedException("Surname is not valid, must contains more then 3 characters");
+        if (Utils.isNotStringValid(surname)) {
+            throw new ProccesingRejectedException("Firstname is not valid, must contains more then 3 character");
         }
-
-        if (!Utils.isEmailValid(email)) {
-            throw new ProccesingRejectedException("Email is not in valid format");
+        if (Utils.isNotEmailValid(email)) {
+            throw new ProccesingRejectedException("Firstname is not valid, must contains more then 3 character");
         }
-        Optional<Student> studentOptional = studentRepository.findStudentByEmail(email);
-        if (studentOptional.isPresent()) {
-            throw new ConflictException("This student with this email is exist");
+        if (age > 10) {
+            throw new ProccesingRejectedException("Student must be older then 10 years old");
         }
 
         student.setFirstname(firstname);
-        student.setLastname(lastname);
+        student.setSurname(surname);
         student.setEmail(email);
-        if (!Objects.equals(student.getAge(), bodyStudent.getAge())) {
-            student.setAge(bodyStudent.getAge());
-        }
-        if (!Objects.equals(student.getBoarding(), bodyStudent.getBoarding())) {
-            student.setBoarding(bodyStudent.getBoarding());
-        }
+        student.setBoarding(studentIDTO.getBoarding());
+        student.setAge(age);
     }
 
     public void deleteStudent(Long studentId) throws DataNotFoundException {
         if (!studentRepository.existsById(studentId)) {
-            throw new DataNotFoundException("Student with id " + studentId + " does not exists");
+            throw new DataNotFoundException("This student is not exists");
         }
-        studentRepository.deleteById(studentId);
+        classroomRepository.deleteById(studentId);
     }
 }
